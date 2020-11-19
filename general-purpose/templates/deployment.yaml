@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}
+  labels:
+    app: {{ .Chart.Name }}
+
+spec:
+  # Number of pod
+  replicas: {{ .Values.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+        deploy-date: {{ date "20060102150405" now | quote }}
+    spec:
+      containers:
+      - name: {{ .Chart.Name }}
+        # Check image coming from local machine
+        {{-  $name := .Values.app.image.name | default .Chart.Name }}
+        {{-  $repository := .Values.app.image.repository | default "docker.io" }}
+        image: {{ $repository }}/{{ $name }}:{{ .Values.app.image.tag }}
+        imagePullPolicy: {{ .Values.app.image.pullPolicy | default "Always" }}
+        ports:
+          - name: http
+            containerPort: {{ .Values.app.image.containerPort | default 80 }}
+            protocol: TCP
+
+        # Environment as file from configMap
+        {{ if .Values.volumeMounts.enabled }}
+        volumeMounts:
+          {{- range $key, $value := .Values.volumeMounts.volumes }}
+          - name: {{ $value.name }}
+            mountPath: {{ $value.mountPath }}
+          {{- end }}
+        {{ end }}
+
+        # Health Check
+        {{ if .Values.app.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            path: {{ .Values.app.readinessProbe.path | default "/" }}
+            port: {{ .Values.app.image.containerPort | default 80 }}
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          successThreshold: 1
+          failureThreshold: 300
+        {{ end }}
+
+        # Limit & Request for pod(s)
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+
+        # Environment variable injection
+        env:
+            # Check ConfigMap is enabled
+            {{- if .Values.ConfigMap.enabled -}}
+
+            # Defined variable configMapMeta.
+            {{-  $configMapMeta := printf "%s--%s" .Chart.Name "configmap" -}}
+            
+            # Inject env to the application.
+            {{- range $key, $value := .Values.ConfigMap.data }}
+            - name: {{ $value.name }}
+              valueFrom:
+                configMapKeyRef:
+                  # .Chart.Name could not be using directly in range loop,
+                  # you have to defined variable before range loop.
+                  name: {{ $configMapMeta }}
+                  key: {{ $value.name }}
+            {{- end }}
+
+            # end if
+            {{- end }}
+
+      # dynamic env value mount from config map
+      {{ if .Values.volumeMounts.enabled }}
+      volumes:
+        {{- range $key, $value := .Values.volumeMounts.volumes }}
+        - name: {{ $value.name }}
+          {{ if $value.emptyDir }}  # check for create volume as empty (empty volume)
+          emptyDir: {}
+          {{ else if $value.configMap }}  # check for create volume from configMap (configMap volume)
+          configMap:
+            name: {{ $value.configMap.name }}--configmap
+            items:
+            - key: {{ $value.configMap.fileName }}
+              path: {{ $value.configMap.fileName }}
+          {{- end }}
+        {{- end }} # end range
+      {{- end }} # end if
+
+  # Deployment strategy
+  strategy:
+    {{- toYaml .Values.strategy | nindent 4 }}

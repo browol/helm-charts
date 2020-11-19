@@ -1,0 +1,38 @@
+app:
+  image:
+    repository: # abc.azurecr.io
+    tag: dev
+    pullPolicy: Always
+    containerPort: 4200
+  readinessProbe:
+    enabled: false
+    path: # /api/health
+  envVolume:
+    enabled: false
+    name: # env-volume
+    mountPath: # /app/src/assets/env/
+    fileName: # config.json
+    fromFile: # override/config.json
+
+service:
+  ports:
+    - name: # angular
+      port: # 8080
+      targetPort: # 4200
+      protocol: # TCP
+
+ingress:
+  enabled: false
+  domainName: # hello.example.com
+  paths:
+    - path: # /
+      backend:
+        servicePort: # 8080
+  
+ConfigMap:
+  enabled: false
+  data:
+    - name: NODE_ENV
+      value: "dev"
+    - name: PRODUCTION
+      value: false

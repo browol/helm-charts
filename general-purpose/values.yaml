@@ -1,0 +1,68 @@
+# Define Application
+app:
+  image:
+    repository: docker.io
+    name: myapp
+    tag: dev
+    pullPolicy: never
+    containerPort: 4200
+  readinessProbe:
+    enabled: false
+    path: /api/health
+
+# Volume configuration
+volumeMounts:
+  enabled: false
+  volumes:
+    - name: abc-volume
+      mountPath: /app
+      emptyDir: false # {}
+      configMap: 
+        name: std01-dynamic-env
+        fromFile: dev/config.json
+        fileName: config.json
+
+# Environment Injection
+ConfigMap:
+  enabled: true
+  data:
+    - name: NODE_ENV
+      value: "dev"
+
+# Ingress controller (Incoming Traffic from external)
+ingress:
+  enabled: false
+  port: 80
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+  domainName: hello.example.com
+  paths:
+    - path: /
+      backend:
+        servicePort: 80
+
+# Services
+service:
+  ports:
+    - name: angular
+      port: 80
+      targetPort: 4200
+      protocol: TCP
+
+# Deployment strategy
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 25%
+
+# Pod Resource
+resources:
+  limits:
+    cpu: 150m
+    memory: 300Mi
+  requests:
+    cpu: 50m
+    memory: 150Mi

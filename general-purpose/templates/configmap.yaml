@@ -1,0 +1,30 @@
+{{- if .Values.ConfigMap.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Chart.Name }}--configmap
+data:
+  {{- if .Values.ConfigMap.data -}}
+  {{- range $index, $value := .Values.ConfigMap.data }}
+  {{ $value.name }}: {{ $value.value | quote }}
+  {{- end }}
+  {{- end -}}
+{{- end }}
+
+---
+
+{{ if .Values.volumeMounts.enabled }}
+
+{{- range $index, $value := .Values.volumeMounts.volumes }}
+{{ if $value.configMap }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $value.configMap.name }}--configmap
+data:
+  {{ $value.configMap.fileName }}: |-
+{{ .Files.Get $value.configMap.fileName | indent 4 }} # buggy <.Files.Get>: nil pointer evaluating interface {}.Get
+{{- end }} # end if 
+{{- end }} # end range
+
+{{- end }} # end if
