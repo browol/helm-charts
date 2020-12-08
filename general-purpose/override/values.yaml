@@ -1,6 +1,7 @@
 app:
   image:
-    repository: # abc.azurecr.io
+    registry: # docker.io
+    repository: # nginx
     tag: dev
     pullPolicy: Always
     containerPort: 4200
@@ -14,6 +15,9 @@ app:
     fileName: # config.json
     fromFile: # override/config.json
 
+volumeMounts:
+  enabled: false
+
 service:
   ports:
     - name: # angular
@@ -23,7 +27,7 @@ service:
 
 ingress:
   enabled: false
-  domainName: # hello.example.com
+  domainName: # abc.example.com
   paths:
     - path: # /
       backend:
@@ -32,7 +36,5 @@ ingress:
 ConfigMap:
   enabled: false
   data:
-    - name: NODE_ENV
-      value: "dev"
-    - name: PRODUCTION
-      value: false
+    - name: # NODE_ENV
+      value: # "dev"

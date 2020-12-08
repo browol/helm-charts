@@ -2,7 +2,7 @@
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
-  name: {{ .Chart.Name }}-ingress
+  name: {{ .Release.Name }}-ingress
   annotations:
     {{- toYaml .Values.ingress.annotations | nindent 4 }}
 spec:
@@ -20,7 +20,7 @@ spec:
     - host: {{ .Values.ingress.domainName | quote }}
       http:
         paths:
-          {{-  $serviceName := .Chart.Name -}}
+          {{-  $serviceName := .Release.Name -}}
           {{- range .Values.ingress.paths }}
           - path: {{ .path }}
             backend:

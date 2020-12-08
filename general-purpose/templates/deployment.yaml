@@ -1,28 +1,28 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Chart.Name }}
+  name: {{ .Release.Name }}
   labels:
-    app: {{ .Chart.Name }}
+    app: {{ .Release.Name }}
 
 spec:
   # Number of pod
-  replicas: {{ .Values.replicas | default 1 }}
+  replicas: {{ .Values.app.replicas | default 1 }}
   selector:
     matchLabels:
-      app: {{ .Chart.Name }}
+      app: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app: {{ .Chart.Name }}
+        app: {{ .Release.Name }}
         deploy-date: {{ date "20060102150405" now | quote }}
     spec:
       containers:
-      - name: {{ .Chart.Name }}
+      - name: {{ .Release.Name }}
         # Check image coming from local machine
-        {{-  $name := .Values.app.image.name | default .Chart.Name }}
-        {{-  $repository := .Values.app.image.repository | default "docker.io" }}
-        image: {{ $repository }}/{{ $name }}:{{ .Values.app.image.tag }}
+        {{-  $repository := .Values.app.image.repository | default .Release.Name }}
+        {{-  $registry := .Values.app.image.registry | default "docker.io" }}
+        image: {{ $registry }}/{{ $repository }}:{{ .Values.app.image.tag }}
         imagePullPolicy: {{ .Values.app.image.pullPolicy | default "Always" }}
         ports:
           - name: http
@@ -44,11 +44,29 @@ spec:
           httpGet:
             path: {{ .Values.app.readinessProbe.path | default "/" }}
             port: {{ .Values.app.image.containerPort | default 80 }}
-          initialDelaySeconds: 0
-          periodSeconds: 10
-          successThreshold: 1
-          failureThreshold: 300
+            {{ if .Values.app.livenessProbe.httpHeaders }}
+            httpHeaders: {{ .Values.app.livenessProbe.headers }}
+            {{ end }}
+          initialDelaySeconds: {{ .Values.app.readinessProbe.initialDelaySeconds | default 0 }}
+          periodSeconds: {{ .Values.app.readinessProbe.periodSeconds | default 10 }}
+          successThreshold: {{ .Values.app.readinessProbe.successThreshold | default 1 }}
+          failureThreshold: {{ .Values.app.readinessProbe.failureThreshold | default 300 }}
         {{ end }}
+
+        {{ if .Values.app.livenessProbe.enabled }}
+        livenessProbe:
+          httpGet:
+            path: {{ .Values.app.livenessProbe.path | default "/" }}
+            port: {{ .Values.app.image.containerPort | default 80 }}
+            {{ if .Values.app.livenessProbe.httpHeaders }}
+            httpHeaders: {{ .Values.app.livenessProbe.headers }}
+            {{ end }}
+          initialDelaySeconds: {{ .Values.app.livenessProbe.initialDelaySeconds | default 0 }}
+          periodSeconds: {{ .Values.app.livenessProbe.periodSeconds | default 10 }}
+          successThreshold: {{ .Values.app.livenessProbe.successThreshold | default 1 }}
+          failureThreshold: {{ .Values.app.livenessProbe.failureThreshold | default 300 }}
+        {{ end }}
+
 
         # Limit & Request for pod(s)
         resources:
@@ -60,14 +78,14 @@ spec:
             {{- if .Values.ConfigMap.enabled -}}
 
             # Defined variable configMapMeta.
-            {{-  $configMapMeta := printf "%s--%s" .Chart.Name "configmap" -}}
+            {{-  $configMapMeta := printf "%s--%s" .Release.Name "configmap" -}}
             
             # Inject env to the application.
             {{- range $key, $value := .Values.ConfigMap.data }}
             - name: {{ $value.name }}
               valueFrom:
                 configMapKeyRef:
-                  # .Chart.Name could not be using directly in range loop,
+                  # .Release.Name could not be using directly in range loop,
                   # you have to defined variable before range loop.
                   name: {{ $configMapMeta }}
                   key: {{ $value.name }}
@@ -78,6 +96,7 @@ spec:
 
       # dynamic env value mount from config map
       {{ if .Values.volumeMounts.enabled }}
+      {{- $releaseName := .Release.Name -}}
       volumes:
         {{- range $key, $value := .Values.volumeMounts.volumes }}
         - name: {{ $value.name }}
@@ -85,7 +104,7 @@ spec:
           emptyDir: {}
           {{ else if $value.configMap }}  # check for create volume from configMap (configMap volume)
           configMap:
-            name: {{ $value.configMap.name }}--configmap
+            name: {{ $value.configMap.name }}-{{ $releaseName }}--configmap
             items:
             - key: {{ $value.configMap.fileName }}
               path: {{ $value.configMap.fileName }}

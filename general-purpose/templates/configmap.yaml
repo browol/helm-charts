@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Chart.Name }}--configmap
+  name: {{ .Release.Name }}--configmap
 data:
   {{- if .Values.ConfigMap.data -}}
   {{- range $index, $value := .Values.ConfigMap.data }}
@@ -13,18 +13,22 @@ data:
 
 ---
 
-{{ if .Values.volumeMounts.enabled }}
+{{- if .Values.volumeMounts.enabled -}}
 
-{{- range $index, $value := .Values.volumeMounts.volumes }}
-{{ if $value.configMap }}
+{{- $releaseName := .Release.Name -}}
+{{- $files := .Files -}} # declare $files for use .Files.Get inside range
+{{- range $index, $value := .Values.volumeMounts.volumes -}}
+
+{{- if and $value.configMap (eq $value.emptyDir false) -}} # check existing configMap
+
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ $value.configMap.name }}--configmap
+  name: {{ $value.configMap.name }}-{{ $releaseName }}--configmap
 data:
   {{ $value.configMap.fileName }}: |-
-{{ .Files.Get $value.configMap.fileName | indent 4 }} # buggy <.Files.Get>: nil pointer evaluating interface {}.Get
-{{- end }} # end if 
-{{- end }} # end range
+{{ $files.Get $value.configMap.fromFile | indent 4 }}
 
-{{- end }} # end if
+{{- end -}}
+{{- end -}}
+{{- end -}}

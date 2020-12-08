@@ -1,1 +1,0 @@
-# Helm Chart for general purpose

@@ -1,55 +1,35 @@
 # Define Application
 app:
+  replicas: 1
   image:
-    repository: docker.io
-    name: myapp
-    tag: dev
-    pullPolicy: never
-    containerPort: 4200
-  readinessProbe:
-    enabled: false
-    path: /api/health
-
-# Volume configuration
-volumeMounts:
-  enabled: false
-  volumes:
-    - name: abc-volume
-      mountPath: /app
-      emptyDir: false # {}
-      configMap: 
-        name: std01-dynamic-env
-        fromFile: dev/config.json
-        fileName: config.json
+    pullPolicy: Always
 
 # Environment Injection
 ConfigMap:
-  enabled: true
+  enabled: false
   data:
-    - name: NODE_ENV
-      value: "dev"
+    - name: # NODE_ENV
+      value: # "dev"
+
+# Dynamic volumes
+volumeMounts:
+  enabled: false
+  volumes:
+    - name: # abc-volume
+      mountPath: # /app
+      emptyDir: # false # {}
+      configMap: 
+        name: # general-purpose-dynamic-env
+        fromFile: # dev/config.json
+        fileName: # config.json
 
 # Ingress controller (Incoming Traffic from external)
 ingress:
   enabled: false
-  port: 80
   annotations:
     kubernetes.io/ingress.class: "nginx"
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
-  domainName: hello.example.com
-  paths:
-    - path: /
-      backend:
-        servicePort: 80
-
-# Services
-service:
-  ports:
-    - name: angular
-      port: 80
-      targetPort: 4200
-      protocol: TCP
 
 # Deployment strategy
 strategy:
