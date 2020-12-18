@@ -20,8 +20,8 @@ spec:
       containers:
       - name: {{ .Release.Name }}
         # Check image coming from local machine
-        {{-  $repository := .Values.app.image.repository | default .Release.Name }}
-        {{-  $registry := .Values.app.image.registry | default "docker.io" }}
+        {{  $repository := .Values.app.image.repository | default .Release.Name }}
+        {{  $registry := .Values.app.image.registry | default "docker.io" }}
         image: {{ $registry }}/{{ $repository }}:{{ .Values.app.image.tag }}
         imagePullPolicy: {{ .Values.app.image.pullPolicy | default "Always" }}
         ports:
@@ -32,14 +32,23 @@ spec:
         # Environment as file from configMap
         {{ if .Values.volumeMounts.enabled }}
         volumeMounts:
-          {{- range $key, $value := .Values.volumeMounts.volumes }}
+          {{ range $key, $value := .Values.volumeMounts.volumes }}
+          {{ if $value }}
           - name: {{ $value.name }}
             mountPath: {{ $value.mountPath | quote }}
             readOnly: {{ $value.readOnly | default false }}
-          {{- end }}
+          {{ end }}
+          {{ end }}
+
+          {{ if and .Values.keyVault.enabled .Values.keyVault.config.autoVolume }} # auto mount volume, look at `keyVault.config.autoVolume`
+          - name: vault
+            mountPath: /mnt/vault
+            readOnly: true
+          {{ end }}
         {{ end }}
 
         # Health Check
+        {{ if .Values.app.readinessProbe }}
         {{ if .Values.app.readinessProbe.enabled }}
         readinessProbe:
           httpGet:
@@ -53,7 +62,9 @@ spec:
           successThreshold: {{ .Values.app.readinessProbe.successThreshold | default 1 }}
           failureThreshold: {{ .Values.app.readinessProbe.failureThreshold | default 300 }}
         {{ end }}
+        {{ end }}
 
+        {{ if .Values.app.livenessProbe }}
         {{ if .Values.app.livenessProbe.enabled }}
         livenessProbe:
           httpGet:
@@ -66,6 +77,7 @@ spec:
           periodSeconds: {{ .Values.app.livenessProbe.periodSeconds | default 10 }}
           successThreshold: {{ .Values.app.livenessProbe.successThreshold | default 1 }}
           failureThreshold: {{ .Values.app.livenessProbe.failureThreshold | default 300 }}
+        {{ end }}
         {{ end }}
 
         # Limit & Request for pod(s)
@@ -111,7 +123,8 @@ spec:
       {{- $releaseName := .Release.Name -}}
       {{- $secret := .Values.keyVault -}}
       volumes:
-        {{- range $key, $value := .Values.volumeMounts.volumes }}
+        {{ if .Values.volumeMounts.volumes }}
+        {{ range $key, $value := .Values.volumeMounts.volumes }}
         - name: {{ $value.name }}
 
           # Empty Dir
@@ -136,9 +149,22 @@ spec:
             nodePublishSecretRef:
               name: {{ $secret.config.secretRef | quote }} # secret name that create in namespace before helm install
 
-          {{- end }} # end if
-        {{- end }} # end range
-      {{- end }} # end if
+          {{ end }} # end if
+        {{ end }} # end range
+        {{ end }} # end if
+        
+        {{ if and .Values.keyVault.enabled .Values.keyVault.config.autoVolume }} # auto create volume option for Key Vault
+        - name: vault
+          csi:
+            driver: {{ $secret.config.driver | default "secrets-store.csi.k8s.io" }}
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ $releaseName }}--secret-provider
+            nodePublishSecretRef:
+              name: {{ $secret.config.secretRef | quote }} # secret name that create in namespace before helm install
+        {{ end }}
+
+      {{ end }} # end if
 
   # Deployment strategy
   strategy:

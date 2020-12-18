@@ -2,26 +2,34 @@
 app:
   replicas: 1
   image:
+    registry: docker.io
+    repository: #
+    tag: latest
     pullPolicy: Always
+
+# Define service
+service:
+  ports:
+    - name: #
+      port: 80
+      targetPort: 80
+      protocol: TCP
 
 # Environment Injection
 ConfigMap:
   enabled: false
   data:
-    - name: # NODE_ENV
-      value: # "dev"
+    - name: #
+      value: #
 
 # Dynamic volumes
 volumeMounts:
   enabled: false
   volumes:
-    - name: # abc-volume
-      mountPath: # /app
-      emptyDir: # false # {}
-      configMap: 
-        name: # general-purpose-dynamic-env
-        fromFile: # dev/config.json
-        fileName: # config.json
+    - name: # vol
+      mountPath: # /mnt
+      type: #
+      spec: #
 
 # Ingress controller (Incoming Traffic from external)
 ingress:
@@ -46,3 +54,22 @@ resources:
   requests:
     cpu: 50m
     memory: 150Mi
+
+# key Vault for public cloud provider
+keyVault:
+  enabled: false
+  config:
+    driver: secrets-store.csi.k8s.io
+    provider: azure
+    resourceGroup: #
+    subscriptionId: #
+    tenantId: #
+    secretRef: #
+    cloudName: AzurePublicCloud
+    vaultName: #
+  objects:
+    - secretName: #
+      type: Opaque
+      data:
+        - name: #
+          key: #

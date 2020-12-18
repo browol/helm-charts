@@ -2,65 +2,54 @@
 app:
   replicas: 1
   image:
+    registry: docker.io
+    repository: nginx
+    tag: latest
     pullPolicy: Always
+
+service:
+  ports:
+    - name: #
+      port: 80
+      targetPort: 80
+      protocol: TCP
 
 # Environment Injection
 ConfigMap:
   enabled: false
   data:
-    - name: NODE_ENV
-      value: "dev"
+    - name: #
+      value: #
 
 # key Vault for public cloud provider
 keyVault:
   enabled: false
   config:
-    provider: # azure
-    driver: # secrets-store.csi.k8s.io
-    resourceGroup: # abc-west-us-resource-group
-    subscriptionId: # abc-subscription
-    tenantId: # xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-    secretRef: # secrets-store-creds
-    cloudName: # AzurePublicCloud
-    vaultName: # my-abc-vault
+    autoVolume: true
+    provider: azure
+    driver: secrets-store.csi.k8s.io
+    resourceGroup: #
+    subscriptionId: #
+    tenantId: #
+    secretRef: secrets-store-creds
+    cloudName: AzurePublicCloud
+    vaultName: #
   objects:
-    - secretName: # my-namespace-secret
-      type: # Opaque
+    - secretName: my-namespace-secret
+      type: Opaque
       labels: #
       data:
-        - name: # dev-mysql_user
-          key: # mysql_user
+        - name: dev-mysql_user
+          key: mysql_user
 
 # Dynamic volumes
 volumeMounts:
   enabled: false
-  volumes:
-
-    # Empty volume
-    - name: # empty-volume
-      type: # emptyDir
-      mountPath: # /app
-      readOnly: # false
-
-    # ConfigMap volume
-    - name: # configmap-volume
-      type: # configMap
-      mountPath: # /app
-      spec: 
-        name: # dynamic-env
-        fromFile: # dev/config.json
-        fileName: # config.json
-      readOnly: # true
-
-    # Secret Manager volume
-    - name: # secret-volume
-      mountPath: # /mnt/secrets-store
-      type: # csi
-      readOnly: # true
+  volumes: #
 
 # Ingress controller (Incoming Traffic from external)
 ingress:
-  enabled: false
+  enabled: true
   annotations:
     kubernetes.io/ingress.class: "nginx"
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
@@ -68,17 +57,9 @@ ingress:
   paths:
     - path: /
       backend:
-        servicePort: 8080
+        servicePort: 80
   http:
-    domainName: # abc.example.com
-  tls: 
-    cert:
-      path: # certificate
-      fileName: # *
-    hosts:
-      - domainName:
-          - # abc.example.com
-        existingSecret: # (optional) myabcsecret 
+    domainName: #
 
 # Deployment strategy
 strategy:
