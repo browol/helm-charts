@@ -34,7 +34,8 @@ spec:
         volumeMounts:
           {{- range $key, $value := .Values.volumeMounts.volumes }}
           - name: {{ $value.name }}
-            mountPath: {{ $value.mountPath }}
+            mountPath: {{ $value.mountPath | quote }}
+            readOnly: {{ $value.readOnly | default false }}
           {{- end }}
         {{ end }}
 
@@ -67,48 +68,75 @@ spec:
           failureThreshold: {{ .Values.app.livenessProbe.failureThreshold | default 300 }}
         {{ end }}
 
-
         # Limit & Request for pod(s)
         resources:
           {{- toYaml .Values.resources | nindent 10 }}
 
+        # Defined variable configMapMeta.
+        {{-  $configMapMeta := printf "%s--%s" .Release.Name "configmap" -}}
+        # Defined variable secretMeta.
+        {{ $secretMeta := printf "%s--%s" .Release.Name "keyvault" }}
+
         # Environment variable injection
         env:
-            # Check ConfigMap is enabled
-            {{- if .Values.ConfigMap.enabled -}}
+          
+          # Check ConfigMap is enabled
+          {{- if .Values.ConfigMap.enabled -}}
+          # Inject env to the application.
+          {{- range $key, $value := .Values.ConfigMap.data }}
+          - name: {{ $value.name }}
+            valueFrom:
+              configMapKeyRef:
+                name: {{ $configMapMeta }}
+                key: {{ $value.name }}
+          {{- end }}
+          {{- end }}
 
-            # Defined variable configMapMeta.
-            {{-  $configMapMeta := printf "%s--%s" .Release.Name "configmap" -}}
-            
-            # Inject env to the application.
-            {{- range $key, $value := .Values.ConfigMap.data }}
-            - name: {{ $value.name }}
-              valueFrom:
-                configMapKeyRef:
-                  # .Release.Name could not be using directly in range loop,
-                  # you have to defined variable before range loop.
-                  name: {{ $configMapMeta }}
-                  key: {{ $value.name }}
-            {{- end }}
-
-            # end if
-            {{- end }}
+          # Check Secret Manager is enabled
+          {{- if .Values.keyVault.enabled -}}
+          # Inject env to the application.
+          {{- range $key, $value := .Values.keyVault.objects }}
+          {{- range $i, $v := $value.data }}
+          - name: {{ $v.name }}
+            valueFrom:
+              secretKeyRef:
+                name: {{ $value.secretName }}-{{ $secretMeta }}
+                key: {{ $v.key }}
+          {{- end }}
+          {{- end }}
+          {{- end }}
 
       # dynamic env value mount from config map
       {{ if .Values.volumeMounts.enabled }}
       {{- $releaseName := .Release.Name -}}
+      {{- $secret := .Values.keyVault -}}
       volumes:
         {{- range $key, $value := .Values.volumeMounts.volumes }}
         - name: {{ $value.name }}
-          {{ if $value.emptyDir }}  # check for create volume as empty (empty volume)
+
+          # Empty Dir
+          {{ if eq $value.type "emptyDir" }}  # check for create volume as empty (empty volume)
           emptyDir: {}
-          {{ else if $value.configMap }}  # check for create volume from configMap (configMap volume)
+
+          # ConfigMap
+          {{ else if eq $value.type "configMap" }}  # check for create volume from configMap (configMap volume)
           configMap:
-            name: {{ $value.configMap.name }}-{{ $releaseName }}--configmap
+            name: {{ $value.spec.name }}-{{ $releaseName }}--configmap
             items:
-            - key: {{ $value.configMap.fileName }}
-              path: {{ $value.configMap.fileName }}
-          {{- end }}
+            - key: {{ $value.spec.fileName }}
+              path: {{ $value.spec.fileName }}
+
+          # CSI Driver for Key Vault
+          {{ else if and (eq $value.type "csi") (eq $secret.enabled true) }}
+          csi:
+            driver: {{ $secret.config.driver | default "secrets-store.csi.k8s.io" }}
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: {{ $releaseName }}--secret-provider
+            nodePublishSecretRef:
+              name: {{ $secret.config.secretRef | quote }} # secret name that create in namespace before helm install
+
+          {{- end }} # end if
         {{- end }} # end range
       {{- end }} # end if
 

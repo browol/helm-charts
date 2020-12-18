@@ -1,40 +1,83 @@
+# Define Application
 app:
+  replicas: 1
   image:
-    registry: # docker.io
-    repository: # nginx
-    tag: dev
     pullPolicy: Always
-    containerPort: 4200
-  readinessProbe:
-    enabled: false
-    path: # /api/health
-  envVolume:
-    enabled: false
-    name: # env-volume
-    mountPath: # /app/src/assets/env/
-    fileName: # config.json
-    fromFile: # override/config.json
 
-volumeMounts:
-  enabled: false
-
-service:
-  ports:
-    - name: # angular
-      port: # 8080
-      targetPort: # 4200
-      protocol: # TCP
-
-ingress:
-  enabled: false
-  domainName: # abc.example.com
-  paths:
-    - path: # /
-      backend:
-        servicePort: # 8080
-  
+# Environment Injection
 ConfigMap:
   enabled: false
   data:
-    - name: # NODE_ENV
-      value: # "dev"
+    - name: NODE_ENV
+      value: "dev"
+
+# key Vault for public cloud provider
+keyVault:
+  enabled: false
+  config:
+    provider: # azure
+    driver: # secrets-store.csi.k8s.io
+    resourceGroup: # abc-west-us-resource-group
+    subscriptionId: # abc-subscription
+    tenantId: # xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+    secretRef: # secrets-store-creds
+    cloudName: # AzurePublicCloud
+    vaultName: # my-abc-vault
+  objects:
+    - secretName: # my-namespace-secret
+      type: # Opaque
+      labels: #
+      data:
+        - name: # dev-mysql_user
+          key: # mysql_user
+
+# Dynamic volumes
+volumeMounts:
+  enabled: false
+  volumes:
+
+    # Empty volume
+    - name: # empty-volume
+      type: # emptyDir
+      mountPath: # /app
+      readOnly: # false
+
+    # ConfigMap volume
+    - name: # configmap-volume
+      type: # configMap
+      mountPath: # /app
+      spec: 
+        name: # dynamic-env
+        fromFile: # dev/config.json
+        fileName: # config.json
+      readOnly: # true
+
+    # Secret Manager volume
+    - name: # secret-volume
+      mountPath: # /mnt/secrets-store
+      type: # csi
+      readOnly: # true
+
+# Ingress controller (Incoming Traffic from external)
+ingress:
+  enabled: false
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+
+# Deployment strategy
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 25%
+
+# Pod Resource
+resources:
+  limits:
+    cpu: 150m
+    memory: 300Mi
+  requests:
+    cpu: 50m
+    memory: 150Mi

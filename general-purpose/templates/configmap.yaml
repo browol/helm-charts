@@ -19,15 +19,15 @@ data:
 {{- $files := .Files -}} # declare $files for use .Files.Get inside range
 {{- range $index, $value := .Values.volumeMounts.volumes -}}
 
-{{- if and $value.configMap (eq $value.emptyDir false) -}} # check existing configMap
+{{- if eq $value.type "configMap" -}} # check volume type configMap
 
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ $value.configMap.name }}-{{ $releaseName }}--configmap
+  name: {{ $value.spec.name }}-{{ $releaseName }}--configmap
 data:
-  {{ $value.configMap.fileName }}: |-
-{{ $files.Get $value.configMap.fromFile | indent 4 }}
+  {{ $value.spec.fileName }}: |-
+{{ $files.Get $value.spec.fromFile | indent 4 }}
 
 {{- end -}}
 {{- end -}}
