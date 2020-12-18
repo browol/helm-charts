@@ -3,7 +3,7 @@ app:
   replicas: 1
   image:
     registry: docker.io
-    repository: nginx
+    repository: #
     tag: latest
     pullPolicy: Always
 
@@ -35,12 +35,12 @@ keyVault:
     cloudName: AzurePublicCloud
     vaultName: #
   objects:
-    - secretName: my-namespace-secret
+    - secretName: #
       type: Opaque
       labels: #
       data:
-        - name: dev-mysql_user
-          key: mysql_user
+        - name: #
+          key: #
 
 # Dynamic volumes
 volumeMounts:
@@ -49,7 +49,7 @@ volumeMounts:
 
 # Ingress controller (Incoming Traffic from external)
 ingress:
-  enabled: true
+  enabled: false
   annotations:
     kubernetes.io/ingress.class: "nginx"
     nginx.ingress.kubernetes.io/ssl-redirect: "false"

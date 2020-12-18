@@ -91,32 +91,30 @@ spec:
 
         # Environment variable injection
         env:
-          
           # Check ConfigMap is enabled
-          {{- if .Values.ConfigMap.enabled -}}
+          {{ if .Values.ConfigMap.enabled }}
           # Inject env to the application.
-          {{- range $key, $value := .Values.ConfigMap.data }}
+          {{ range $key, $value := .Values.ConfigMap.data }}
           - name: {{ $value.name }}
             valueFrom:
               configMapKeyRef:
                 name: {{ $configMapMeta }}
                 key: {{ $value.name }}
-          {{- end }}
-          {{- end }}
-
-          # Check Secret Manager is enabled
-          {{- if .Values.keyVault.enabled -}}
+          {{ end }}
+          {{ end }}
+          # Check Secret is enabled
+          {{ if .Values.keyVault.enabled }}
           # Inject env to the application.
-          {{- range $key, $value := .Values.keyVault.objects }}
-          {{- range $i, $v := $value.data }}
+          {{ range $key, $value := .Values.keyVault.objects }}
+          {{ range $i, $v := $value.data }}
           - name: {{ $v.name }}
             valueFrom:
               secretKeyRef:
                 name: {{ $value.secretName }}-{{ $secretMeta }}
                 key: {{ $v.key }}
-          {{- end }}
-          {{- end }}
-          {{- end }}
+          {{ end }}
+          {{ end }}
+          {{ end }}
 
       # dynamic env value mount from config map
       {{ if .Values.volumeMounts.enabled }}
@@ -126,11 +124,9 @@ spec:
         {{ if .Values.volumeMounts.volumes }}
         {{ range $key, $value := .Values.volumeMounts.volumes }}
         - name: {{ $value.name }}
-
           # Empty Dir
           {{ if eq $value.type "emptyDir" }}  # check for create volume as empty (empty volume)
           emptyDir: {}
-
           # ConfigMap
           {{ else if eq $value.type "configMap" }}  # check for create volume from configMap (configMap volume)
           configMap:
@@ -138,7 +134,6 @@ spec:
             items:
             - key: {{ $value.spec.fileName }}
               path: {{ $value.spec.fileName }}
-
           # CSI Driver for Key Vault
           {{ else if and (eq $value.type "csi") (eq $secret.enabled true) }}
           csi:
@@ -148,11 +143,9 @@ spec:
               secretProviderClass: {{ $releaseName }}--secret-provider
             nodePublishSecretRef:
               name: {{ $secret.config.secretRef | quote }} # secret name that create in namespace before helm install
-
-          {{ end }} # end if
-        {{ end }} # end range
-        {{ end }} # end if
-        
+          {{ end }}
+        {{ end }}
+        {{ end }}
         {{ if and .Values.keyVault.enabled .Values.keyVault.config.autoVolume }} # auto create volume option for Key Vault
         - name: vault
           csi:
@@ -163,8 +156,7 @@ spec:
             nodePublishSecretRef:
               name: {{ $secret.config.secretRef | quote }} # secret name that create in namespace before helm install
         {{ end }}
-
-      {{ end }} # end if
+      {{ end }}
 
   # Deployment strategy
   strategy:
