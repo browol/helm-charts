@@ -8,23 +8,29 @@ metadata:
 spec:
   {{- if .Values.ingress.tls }}
   tls:
-    {{- range .Values.ingress.tls }}
+    {{  $cert := .Values.ingress.tls.cert }} # declare for use inside range loop
+    {{- $defaultSecret := printf "%s--%s" .Release.Name "tls" -}} # fallback tls secret name
+    {{- range .Values.ingress.tls.hosts }}
     - hosts:
-        {{- range .hosts }}
+        {{- range .domainName }}
         - {{ . | quote }}
         {{- end }}
-      secretName: {{ .secretName }}
+      {{ if .existingSecret }} # if has existing secret use it!
+      secretName: {{ .existingSecret }}
+      {{ else if $cert }} # if has cert path, Will consume default secret name
+      secretName: {{ $defaultSecret }}
+      {{ end }}
     {{- end }}
   {{- end }}
   rules:
-    - host: {{ .Values.ingress.domainName | quote }}
+    - host: {{ .Values.ingress.http.domainName | quote }}
       http:
         paths:
-          {{-  $serviceName := .Release.Name -}}
+          {{- $serviceName := .Release.Name -}}
           {{- range .Values.ingress.paths }}
           - path: {{ .path }}
             backend:
-              serviceName: {{ if .backend.serviceName -}} {{ .backend.serviceName }} {{- else -}} {{ $serviceName }} {{- end }}
+              serviceName: {{ if .backend.serviceName }} {{ .backend.serviceName }} {{ else }} {{ $serviceName }} {{ end }}
               servicePort: {{ .backend.servicePort }}
           {{- end }}
 {{- end }}
