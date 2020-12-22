@@ -107,7 +107,7 @@ spec:
           # Inject env to the application.
           {{ range $key, $value := .Values.keyVault.objects }}
           {{ range $i, $v := $value.data }}
-          - name: {{ $v.name }}
+          - name: {{ $v.key }}
             valueFrom:
               secretKeyRef:
                 name: {{ $value.secretName }}-{{ $secretMeta }}
