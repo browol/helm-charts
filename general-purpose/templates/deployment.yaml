@@ -115,6 +115,10 @@ spec:
           {{ end }}
           {{ end }}
           {{ end }}
+      {{ if .Values.app.image.pullSecret }}
+      imagePullSecrets:
+      - name: {{ .Values.app.image.pullSecret }}
+      {{ end }}
 
       # dynamic env value mount from config map
       {{ if .Values.volumeMounts.enabled }}
