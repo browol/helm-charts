@@ -1,75 +1,93 @@
-# Define Application
 app:
-  replicas: 1
   image:
     registry: docker.io
     repository: #
     tag: latest
     pullPolicy: Always
+    pullSecret: image-secret-helm
+    containerPort: 4200
+  readinessProbe:
+    enabled: true
+    path: /api/health
+  livenessProbe:
+    enabled: true
+    path: /api/health
 
-# Define service
+volumeMounts:
+  enabled: true
+  volumes:
+    - name: env-volume
+      type: configMap
+      mountPath: /app/dist/app/browser/assets/env/
+      spec: 
+        name: env-from-file
+        asEnvVar: ENV_FROM_FILE # Optional
+        fileName: config.json
+        value: |
+          {
+            "hello": "world"
+          }
+
 service:
   ports:
-    - name: #
-      port: 80
-      targetPort: 80
+    - name: angular
+      port: 8080
+      targetPort: 4200
       protocol: TCP
 
-# Environment Injection
-ConfigMap:
-  enabled: false
-  data:
-    - name: #
-      value: #
-
-# Dynamic volumes
-volumeMounts:
-  enabled: false
-  volumes:
-    - name: # vol
-      mountPath: # /mnt
-      type: #
-      spec: #
-
-# Ingress controller (Incoming Traffic from external)
 ingress:
-  enabled: false
+  enabled: true
   annotations:
-    kubernetes.io/ingress.class: "nginx"
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
-    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
-
-# Deployment strategy
-strategy:
-  type: RollingUpdate
-  rollingUpdate:
-    maxSurge: 1
-    maxUnavailable: 25%
-
-# Pod Resource
-resources:
-  limits:
-    cpu: 150m
-    memory: 300Mi
-  requests:
-    cpu: 50m
-    memory: 150Mi
+    nginx.ingress.kubernetes.io/service-upstream: "true"
+    nginx.ingress.kubernetes.io/upstream-vhost: myabc-svc.myabc-ns.svc.cluster.local
+  paths:
+    - path: /
+      backend:
+        servicePort: 8080
+  http:
+    domainName: example.com
+  tls: 
+    cert:
+      path: certificate
+      fileName: "*"
+    hosts:
+      - domainName:
+          - example.com
+  
+ConfigMap:
+  enabled: true
+  data:
+    - name: NODE_ENV
+      value: "dynamic"
+    - name: PRODUCTION
+      value: false
+    - name: USEMOCK
+      value: false
+    - name: AUTH_METHOD
+      value: "saml"
+    - name: AF_API_INTERNAL_URL
+      value: "http://myabc-app:8080"
+    - name: AF_PORTAL_URL
+      value: "https://example.com"
+    - name: LOG_LEVEL
+      value: "debug"
 
 # key Vault for public cloud provider
 keyVault:
-  enabled: false
+  enabled: true
   config:
-    driver: secrets-store.csi.k8s.io
+    autoVolume: true
     provider: azure
-    resourceGroup: #
-    subscriptionId: #
-    tenantId: #
-    secretRef: #
+    driver: secrets-store.csi.k8s.io
+    resourceGroup: rg-example
+    subscriptionId: example-subscription-id
+    tenantId: 6e06e42d-6925-47c6-b9e7-9581c7ca302a
+    secretRef: secrets-store-creds-helm
     cloudName: AzurePublicCloud
-    vaultName: #
+    vaultName: kv-allianz-for-dev-ub79
   objects:
-    - secretName: #
+    - secretName: akssecret
       type: Opaque
       data:
-        - name: #
-          key: #
+        - name: session-secret
+          key: SESSION_SECRET

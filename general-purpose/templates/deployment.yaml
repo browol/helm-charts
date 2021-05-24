@@ -102,9 +102,9 @@ spec:
                 key: {{ $value.name }}
           {{ end }}
           {{ end }}
+          # Env variable from Secret (Azure Keyvault)
           # Check Secret is enabled
           {{ if .Values.keyVault.enabled }}
-          # Inject env to the application.
           {{ range $key, $value := .Values.keyVault.objects }}
           {{ range $i, $v := $value.data }}
           - name: {{ $v.key }}
@@ -115,6 +115,24 @@ spec:
           {{ end }}
           {{ end }}
           {{ end }}
+          # Env variable from volumeMounts (configMap)
+          {{ if .Values.volumeMounts.enabled }}
+          {{ if .Values.volumeMounts.volumes }}
+          {{- $configMapSuffix := printf "%s--%s" .Release.Name "configmap" -}}
+          {{ range $key, $value := .Values.volumeMounts.volumes }}
+          {{ if eq $value.type "configMap" }}
+          {{ if $value.spec.asEnvVar }}
+          - name: {{ $value.spec.asEnvVar }}
+            valueFrom:
+              configMapKeyRef:
+                name: {{ $value.spec.name }}-{{ $configMapSuffix }}
+                key: {{ $value.spec.fileName }}
+          {{ end }}
+          {{ end }}
+          {{ end }}
+          {{ end }}
+          {{ end }}
+          
       {{ if .Values.app.image.pullSecret }}
       imagePullSecrets:
       - name: {{ .Values.app.image.pullSecret }}
