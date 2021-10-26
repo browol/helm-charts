@@ -1,11 +1,11 @@
 app:
   image:
     registry: docker.io
-    repository: #
+    repository: kittipol/helloworld   # (Optional) Default: .Release.Name
     tag: latest
     pullPolicy: Always
-    pullSecret: image-secret-helm
-    containerPort: 4200
+    pullSecret: image-secret-helm     # (Optional)
+    containerPort: 4200               # (Optional)
   readinessProbe:
     enabled: true
     path: /api/health
@@ -16,19 +16,47 @@ app:
 volumeMounts:
   enabled: true
   volumes:
+
+    # Export env variable from inline data and mount as config.json file
     - name: env-volume
       type: configMap
       mountPath: /app/dist/app/browser/assets/env/
       spec: 
         name: env-from-file
-        asEnvVar: ENV_FROM_FILE # Optional
+        asEnvVar: ENV_FROM_FILE # (Optional) Environment variable
         fileName: config.json
         value: |
           {
             "hello": "world"
           }
 
+    # Export env variable from json file and mount as config.json file
+    - name: json-from-file-as-env
+      type: configMap
+      mountPath: /app/assets/
+      spec: 
+        name: env-from-file           # Configmap name
+        asEnvVar: MY_CONFIG           # (Optional) Environment variable
+        fileName: config.json         # Filename in configmap
+        fromFile: ./config.json       # Path to your json file
+
+    # mounting persistance volume claim into pods from azure disk
+    - name: my-azure-managed-disk
+      type: azureDisk
+      mountPath: /tmp/data/
+      spec:
+        diskName: pvcRestored
+        diskURI: /subscriptions/19da35d3-9a1a-4f3b-9b9c-3c56ef409565/resourceGroups/MC_myResourceGroupAKS_myAKSCluster_eastus/providers/Microsoft.Compute/disks/pvcRestored
+
+    # mounting persistance volume claim into pods from existing pvc
+    - name: my-existing-pvc
+      type: persistentVolumeClaim
+      mountPath: /tmp/app/
+      spec:
+        claimName: azure-default-disk
+
 service:
+  enabled: true
   ports:
     - name: angular
       port: 8080
@@ -46,10 +74,14 @@ ingress:
         servicePort: 8080
   http:
     domainName: example.com
+
+  # If you are not going to use tls, 
+  # you can set it to null, 
+  # for example tls: null
   tls: 
     cert:
-      path: certificate
-      fileName: "*"
+      path: ./cert      # Directory path to certificate
+      fileName: "*"     # Load all files into TLS secret
     hosts:
       - domainName:
           - example.com
@@ -71,6 +103,16 @@ ConfigMap:
       value: "https://example.com"
     - name: LOG_LEVEL
       value: "debug"
+
+env:
+  enabled: true
+  data:
+    - name: MY_NODE_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: spec.nodeName
+    - name: ABC
+      value: "haha"
 
 # key Vault for public cloud provider
 keyVault:

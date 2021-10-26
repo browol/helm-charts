@@ -24,19 +24,32 @@ spec:
         {{  $registry := .Values.app.image.registry | default "docker.io" }}
         image: {{ $registry }}/{{ $repository }}:{{ .Values.app.image.tag }}
         imagePullPolicy: {{ .Values.app.image.pullPolicy | default "Always" }}
+        {{ if .Values.app.image.containerPort }}
         ports:
           - name: http
             containerPort: {{ .Values.app.image.containerPort | default 80 }}
             protocol: TCP
+        {{ end }}
+        {{ if .Values.app.image.command }}
+        command:
+          {{- toYaml .Values.app.image.command | nindent 10 }}
+        {{ end }}
+        {{ if .Values.app.image.args }}
+        args: 
+          {{- toYaml .Values.app.image.args | nindent 10 }}
+        {{ end }}
 
         # Environment as file from configMap
-        {{ if .Values.volumeMounts.enabled }}
+        {{ if or .Values.volumeMounts.enabled .Values.keyVault.enabled }}
         volumeMounts:
           {{ range $key, $value := .Values.volumeMounts.volumes }}
           {{ if $value }}
           - name: {{ $value.name }}
             mountPath: {{ $value.mountPath | quote }}
             readOnly: {{ $value.readOnly | default false }}
+            {{ if $value.subPath }}
+            subPath: {{ $value.subPath }}
+            {{ end }}
           {{ end }}
           {{ end }}
 
@@ -91,6 +104,11 @@ spec:
 
         # Environment variable injection
         env:
+          # Check Env is enabled
+          {{ if .Values.env.enabled }}
+          # then inject env to the application.
+          {{- toYaml .Values.env.data | nindent 10 }}
+          {{ end }}
           # Check ConfigMap is enabled
           {{ if .Values.ConfigMap.enabled }}
           # Inject env to the application.
@@ -139,12 +157,13 @@ spec:
       {{ end }}
 
       # dynamic env value mount from config map
-      {{ if .Values.volumeMounts.enabled }}
+      {{ if or .Values.volumeMounts.enabled .Values.keyVault.enabled }}
       {{- $releaseName := .Release.Name -}}
       {{- $secret := .Values.keyVault -}}
       volumes:
         {{ if .Values.volumeMounts.volumes }}
         {{ range $key, $value := .Values.volumeMounts.volumes }}
+        {{ if $value }}
         - name: {{ $value.name }}
           # Empty Dir
           {{ if eq $value.type "emptyDir" }}  # check for create volume as empty (empty volume)
@@ -165,7 +184,18 @@ spec:
               secretProviderClass: {{ $releaseName }}--secret-provider
             nodePublishSecretRef:
               name: {{ $secret.config.secretRef | quote }} # secret name that create in namespace before helm install
+          # Azure Disk
+          {{ else if eq $value.type "azureDisk" }}
+          azureDisk:
+            kind: Managed
+            diskName: {{ $value.spec.diskName }}
+            diskURI: {{ $value.spec.diskURI }}
+          # Existing PVC
+          {{ else if eq $value.type "persistentVolumeClaim" }}
+          persistentVolumeClaim:
+            claimName: {{ $value.spec.claimName }}
           {{ end }}
+        {{ end }}
         {{ end }}
         {{ end }}
         {{ if and .Values.keyVault.enabled .Values.keyVault.config.autoVolume }} # auto create volume option for Key Vault
