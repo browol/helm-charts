@@ -55,10 +55,16 @@ volumeMounts:
       spec:
         claimName: azure-default-disk
 
+    # mounting emptyDir volume
+    - name: my-empty-dir
+      type: emptyDir
+      mountPath: /mnt/azure
+
 service:
   enabled: true
+  name: angular
   ports:
-    - name: angular
+    - name: proxy
       port: 8080
       targetPort: 4200
       protocol: TCP
@@ -66,25 +72,31 @@ service:
 ingress:
   enabled: true
   annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/affinity: cookie
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
     nginx.ingress.kubernetes.io/service-upstream: "true"
-    nginx.ingress.kubernetes.io/upstream-vhost: myabc-svc.myabc-ns.svc.cluster.local
+    nginx.ingress.kubernetes.io/upstream-vhost: angular.myabc-ns.svc.cluster.local
   paths:
     - path: /
       backend:
         servicePort: 8080
   http:
-    domainName: example.com
-
-  # If you are not going to use tls, 
-  # you can set it to null, 
-  # for example tls: null
-  tls: 
-    cert:
-      path: ./cert      # Directory path to certificate
-      fileName: "*"     # Load all files into TLS secret
-    hosts:
-      - domainName:
-          - example.com
+    - domainName: 
+        - example.com
+      tls: null
+    - domainName: 
+        - example2.com
+      tls:
+        existingSecret: null
+        cert:
+          path: ./
+          fileName: "*"
+    - domainName: 
+        - example3.com
+      tls:
+        existingSecret: my-tls-secret
   
 ConfigMap:
   enabled: true

@@ -1,36 +1,40 @@
 {{- if .Values.ingress.enabled -}}
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ .Release.Name }}-ingress
   annotations:
     {{- toYaml .Values.ingress.annotations | nindent 4 }}
 spec:
-  {{- if .Values.ingress.tls }}
+  {{ $defaultSecret := printf "%s--%s" .Release.Name "tls" -}} # fallback tls secret name
+  {{ $serviceName := .Values.service.name | default .Release.Name -}}
+  {{ $paths := .Values.ingress.paths -}}
+
   tls:
-    {{  $cert := .Values.ingress.tls.cert }} # declare for use inside range loop
-    {{- $defaultSecret := printf "%s--%s" .Release.Name "tls" -}} # fallback tls secret name
-    {{- range .Values.ingress.tls.hosts }}
-    - hosts:
-        {{- range .domainName }}
-        - {{ . | quote }}
-        {{- end }}
-      {{ if .existingSecret }} # if has existing secret use it!
-      secretName: {{ .existingSecret }}
-      {{ else if $cert }} # if has cert path, Will consume default secret name
-      secretName: {{ $defaultSecret }}
-      {{ end }}
-    {{- end }}
-  {{- end }}
+  {{- range .Values.ingress.http }}
+  {{ if .tls }}
+  {{ $tlssecret := .tls.existingSecret | default $defaultSecret }}
+    - secretName: {{ $tlssecret }}
+      hosts:
+        {{- toYaml .domainName | nindent 8 }}
+  {{ end }}
+  {{ end -}}
+
+  {{- range .Values.ingress.http }}
   rules:
-    - host: {{ .Values.ingress.http.domainName | quote }}
+    {{- range .domainName }}
+    - host: {{ . | quote }}
       http:
         paths:
-          {{- $serviceName := .Release.Name -}}
-          {{- range .Values.ingress.paths }}
+          {{- range $paths }}
           - path: {{ .path }}
+            pathType: {{ .pathType | default "ImplementationSpecific" }}
             backend:
-              serviceName: {{ if .backend.serviceName }} {{ .backend.serviceName }} {{ else }} {{ $serviceName }} {{ end }}
-              servicePort: {{ .backend.servicePort }}
+              service:
+                name: {{ if .backend.serviceName }} {{ .backend.serviceName }} {{ else }} {{ $serviceName }} {{ end }}
+                port: 
+                  number: {{ .backend.servicePort }}
           {{- end }}
+    {{- end }}
+  {{- end }}
 {{- end }}
