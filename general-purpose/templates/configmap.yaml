@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Release.Name }}--configmap
+  name: {{ .Values.app.name | default .Release.Name }}--configmap
 data:
   {{- if .Values.ConfigMap.data -}}
   {{- range $index, $value := .Values.ConfigMap.data }}
@@ -15,7 +15,7 @@ data:
 
 {{- if .Values.volumeMounts.enabled -}}
 
-{{- $releaseName := .Release.Name -}}
+{{- $releaseName := .Values.app.name | default .Release.Name -}}
 {{- $files := .Files -}} # declare $files for use .Files.Get inside range
 {{- range $index, $value := .Values.volumeMounts.volumes -}}
 

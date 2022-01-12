@@ -1,7 +1,8 @@
 app:
+  name: myhelloworldapp
   image:
     registry: docker.io
-    repository: kittipol/helloworld   # (Optional) Default: .Release.Name
+    repository: kittipol/helloworld   # (Optional) Default: .Values.app.name | default .Release.Name
     tag: latest
     pullPolicy: Always
     pullSecret: image-secret-helm     # (Optional)
@@ -12,6 +13,20 @@ app:
   livenessProbe:
     enabled: true
     path: /api/health
+
+initContainers:
+  enabled: false
+  containers:
+    - name: install
+      image: busybox
+      command:
+        - wget
+        - "-O"
+        - "/work-dir/index.html"
+        - http://info.cern.ch
+      volumeMounts:
+      - name: workdir
+        mountPath: /work-dir
 
 volumeMounts:
   enabled: true
@@ -56,9 +71,9 @@ volumeMounts:
         claimName: azure-default-disk
 
     # mounting emptyDir volume
-    - name: my-empty-dir
+    - name: workdir
       type: emptyDir
-      mountPath: /mnt/azure
+      mountPath: /work-dir
 
 service:
   enabled: true

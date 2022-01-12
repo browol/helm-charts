@@ -1,26 +1,30 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Release.Name }}
+  name: {{ .Values.app.name | default .Release.Name }}
   labels:
-    app: {{ .Release.Name }}
+    app: {{ .Values.app.name | default .Release.Name }}
 
 spec:
   # Number of pod
   replicas: {{ .Values.app.replicas | default 1 }}
   selector:
     matchLabels:
-      app: {{ .Release.Name }}
+      app: {{ .Values.app.name | default .Release.Name }}
   template:
     metadata:
       labels:
-        app: {{ .Release.Name }}
+        app: {{ .Values.app.name | default .Release.Name }}
         deploy-date: {{ date "20060102150405" now | quote }}
     spec:
+      {{ if .Values.initContainers.enabled }}
+      initContainers:
+        {{- toYaml .Values.initContainers.containers | nindent 8 }}
+      {{ end }}
       containers:
-      - name: {{ .Release.Name }}
+      - name: {{ .Values.app.name | default .Release.Name }}
         # Check image coming from local machine
-        {{  $repository := .Values.app.image.repository | default .Release.Name }}
+        {{  $repository := (.Values.app.image.repository | default .Values.app.name) | default .Release.Name }}
         {{  $registry := .Values.app.image.registry | default "docker.io" }}
         image: {{ $registry }}/{{ $repository }}:{{ .Values.app.image.tag }}
         imagePullPolicy: {{ .Values.app.image.pullPolicy | default "Always" }}
@@ -98,9 +102,9 @@ spec:
           {{- toYaml .Values.resources | nindent 10 }}
 
         # Defined variable configMapMeta.
-        {{-  $configMapMeta := printf "%s--%s" .Release.Name "configmap" -}}
+        {{-  $configMapMeta := printf "%s--%s" (.Values.app.name | default .Release.Name) "configmap" -}}
         # Defined variable secretMeta.
-        {{ $secretMeta := printf "%s--%s" .Release.Name "keyvault" }}
+        {{ $secretMeta := printf "%s--%s" (.Values.app.name | default .Release.Name) "keyvault" }}
 
         # Environment variable injection
         env:
@@ -136,7 +140,7 @@ spec:
           # Env variable from volumeMounts (configMap)
           {{ if .Values.volumeMounts.enabled }}
           {{ if .Values.volumeMounts.volumes }}
-          {{- $configMapSuffix := printf "%s--%s" .Release.Name "configmap" -}}
+          {{- $configMapSuffix := printf "%s--%s" .Values.app.name | default .Release.Name "configmap" -}}
           {{ range $key, $value := .Values.volumeMounts.volumes }}
           {{ if eq $value.type "configMap" }}
           {{ if $value.spec.asEnvVar }}
@@ -158,7 +162,7 @@ spec:
 
       # dynamic env value mount from config map
       {{ if or .Values.volumeMounts.enabled .Values.keyVault.enabled }}
-      {{- $releaseName := .Release.Name -}}
+      {{- $releaseName := .Values.app.name | default .Release.Name -}}
       {{- $secret := .Values.keyVault -}}
       volumes:
         {{ if .Values.volumeMounts.volumes }}

@@ -2,12 +2,12 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ .Release.Name }}-ingress
+  name: {{ .Values.app.name | default .Release.Name }}-ingress
   annotations:
     {{- toYaml .Values.ingress.annotations | nindent 4 }}
 spec:
-  {{ $defaultSecret := printf "%s--%s" .Release.Name "tls" -}} # fallback tls secret name
-  {{ $serviceName := .Values.service.name | default .Release.Name -}}
+  {{ $defaultSecret := printf "%s--%s" .Values.app.name | default .Release.Name "tls" -}} # fallback tls secret name
+  {{ $serviceName := .Values.service.name | default .Values.app.name | default .Release.Name -}}
   {{ $paths := .Values.ingress.paths -}}
 
   tls:
