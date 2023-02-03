@@ -11,16 +11,13 @@ data:
   {{- end -}}
 {{- end }}
 
----
-
 {{- if .Values.volumeMounts.enabled -}}
 
 {{- $releaseName := .Values.app.name | default .Release.Name -}}
 {{- $files := .Files -}} # declare $files for use .Files.Get inside range
 {{- range $index, $value := .Values.volumeMounts.volumes -}}
-
 {{- if eq $value.type "configMap" -}} # check volume type configMap
-
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:

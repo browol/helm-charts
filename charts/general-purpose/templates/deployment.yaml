@@ -1,3 +1,4 @@
+{{- $releaseName := .Values.app.name | default .Release.Name -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -16,7 +17,16 @@ spec:
       labels:
         app: {{ .Values.app.name | default .Release.Name }}
         deploy-date: {{ date "20060102150405" now | quote }}
+      annotations:
+        {{- toYaml .Values.app.annotations | nindent 8 }}
     spec:
+      affinity:
+        {{- toYaml .Values.affinity | nindent 8 }}
+
+      {{ if .Values.securityContext.enabled }}
+      securityContext:
+        {{- toYaml .Values.securityContext.spec | nindent 8 }}
+      {{ end }}
       {{ if .Values.initContainers.enabled }}
       initContainers:
         {{- toYaml .Values.initContainers.containers | nindent 8 }}
@@ -42,6 +52,10 @@ spec:
         args: 
           {{- toYaml .Values.app.image.args | nindent 10 }}
         {{ end }}
+        {{ if .Values.app.securityContext.enabled }}
+        securityContext:
+          {{- toYaml .Values.app.securityContext.spec | nindent 10 }}
+        {{ end }}
 
         # Environment as file from configMap
         {{ if or .Values.volumeMounts.enabled .Values.keyVault.enabled }}
@@ -57,10 +71,12 @@ spec:
           {{ end }}
           {{ end }}
 
-          {{ if and .Values.keyVault.enabled .Values.keyVault.config.autoVolume }} # auto mount volume, look at `keyVault.config.autoVolume`
+          {{ if .Values.keyVault.enabled }}
+          {{ if .Values.keyVault.config.autoVolume }} # auto mount volume, look at `keyVault.config.autoVolume`
           - name: vault
             mountPath: /mnt/vault
             readOnly: true
+          {{ end }}
           {{ end }}
         {{ end }}
 
@@ -102,9 +118,15 @@ spec:
           {{- toYaml .Values.resources | nindent 10 }}
 
         # Defined variable configMapMeta.
-        {{-  $configMapMeta := printf "%s--%s" (.Values.app.name | default .Release.Name) "configmap" -}}
+        {{-  $configMapMeta := printf "%s--%s" $releaseName "configmap" -}}
         # Defined variable secretMeta.
-        {{ $secretMeta := printf "%s--%s" (.Values.app.name | default .Release.Name) "keyvault" }}
+        {{ $secretMeta := printf "%s-%s" "keyvault" $releaseName }}
+
+        # Use envFrom to define all of the ConfigMap's data as container environment variables
+        envFrom:
+          {{ if .Values.envFrom.enabled }}
+          {{- toYaml .Values.envFrom.data | nindent 10 }}
+          {{ end }}
 
         # Environment variable injection
         env:
@@ -132,7 +154,7 @@ spec:
           - name: {{ $v.key }}
             valueFrom:
               secretKeyRef:
-                name: {{ $value.secretName }}-{{ $secretMeta }}
+                name: {{ $secretMeta }}-{{ $value.secretName }}
                 key: {{ $v.key }}
           {{ end }}
           {{ end }}
@@ -140,7 +162,7 @@ spec:
           # Env variable from volumeMounts (configMap)
           {{ if .Values.volumeMounts.enabled }}
           {{ if .Values.volumeMounts.volumes }}
-          {{- $configMapSuffix := printf "%s--%s" .Values.app.name | default .Release.Name "configmap" -}}
+          {{- $configMapSuffix := printf "%s--%s" $releaseName "configmap" -}}
           {{ range $key, $value := .Values.volumeMounts.volumes }}
           {{ if eq $value.type "configMap" }}
           {{ if $value.spec.asEnvVar }}
@@ -162,7 +184,6 @@ spec:
 
       # dynamic env value mount from config map
       {{ if or .Values.volumeMounts.enabled .Values.keyVault.enabled }}
-      {{- $releaseName := .Values.app.name | default .Release.Name -}}
       {{- $secret := .Values.keyVault -}}
       volumes:
         {{ if .Values.volumeMounts.volumes }}
@@ -185,7 +206,7 @@ spec:
             driver: {{ $secret.config.driver | default "secrets-store.csi.k8s.io" }}
             readOnly: true
             volumeAttributes:
-              secretProviderClass: {{ $releaseName }}--secret-provider
+              secretProviderClass: secret-provider-{{ $releaseName }}
             nodePublishSecretRef:
               name: {{ $secret.config.secretRef | quote }} # secret name that create in namespace before helm install
           # Azure Disk
@@ -202,15 +223,17 @@ spec:
         {{ end }}
         {{ end }}
         {{ end }}
-        {{ if and .Values.keyVault.enabled .Values.keyVault.config.autoVolume }} # auto create volume option for Key Vault
+        {{ if .Values.keyVault.enabled }}
+        {{ if .Values.keyVault.config.autoVolume }} # auto create volume option for Key Vault
         - name: vault
           csi:
             driver: {{ $secret.config.driver | default "secrets-store.csi.k8s.io" }}
             readOnly: true
             volumeAttributes:
-              secretProviderClass: {{ $releaseName }}--secret-provider
+              secretProviderClass: secret-provider-{{ $releaseName }}
             nodePublishSecretRef:
               name: {{ $secret.config.secretRef | quote }} # secret name that create in namespace before helm install
+        {{ end }}
         {{ end }}
       {{ end }}
 
