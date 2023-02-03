@@ -1,4 +1,4 @@
-# Helm-standard-template
+# Charts
                            
 # How to ...
 
@@ -37,17 +37,17 @@ git push --tags -f
 
 Add helm chart repo
 ```bash
-helm repo add --username $GIT_USERNAME --password $GIT_PASSWORD helm-standard-template https://github.developer.allianz.io/raw/kittipol-tootong/helm-standard-template/main/
+helm repo add browol https://github.com/browol/helm-chart/master/
 ```
 
 Run update repo
 ```bash
-helm repo update helm-standard-template
+helm repo update browol
 ```
 
 Now chart is ready to run.
 ```bash
-helm install myapp helm-standard-template/general-purpose --version <chart-version>
+helm install myapp browol/general-purpose --version <chart-version>
 ```
 
 ## Configuration
@@ -234,9 +234,9 @@ ConfigMap:
       value: false
     - name: AUTH_METHOD
       value: "saml"
-    - name: AF_API_INTERNAL_URL
+    - name: INTERNAL_URL
       value: "http://myabc-app:8080"
-    - name: AF_PORTAL_URL
+    - name: PORTAL_URL
       value: "https://example.com"
     - name: LOG_LEVEL
       value: "debug"
@@ -269,7 +269,7 @@ keyVault:
     driver: secrets-store.csi.k8s.io
     resourceGroup: rg-example
     subscriptionId: example-subscription-id
-    tenantId: 6e06e42d-6925-47c6-b9e7-9581c7ca302a
+    tenantId: 6aee0642d-69ab-c7c6-b9e1-7777c7ca55ba
     secretRef: secrets-store-creds-helm
     cloudName: AzurePublicCloud
     vaultName: kv-allianz-for-dev-ub79
@@ -282,5 +282,3 @@ keyVault:
 
 resources: {}
 ```
-
-For more please go to [examples directory](/examples/)
