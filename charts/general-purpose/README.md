@@ -2,7 +2,7 @@
 
 Add helm chart repo
 ```bash
-helm repo add browol https://github.com/browol/helm-chart/master/
+helm repo add browol https://github.com/browol/helm-chart/main/
 ```
 
 Run update repo
