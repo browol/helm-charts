@@ -87,8 +87,8 @@ spec:
           httpGet:
             path: {{ .Values.app.readinessProbe.path | default "/" }}
             port: {{ .Values.app.image.containerPort | default 80 }}
-            {{ if .Values.app.livenessProbe.httpHeaders }}
-            httpHeaders: {{ .Values.app.livenessProbe.headers }}
+            {{ if .Values.app.readinessProbe.httpHeaders }}
+            httpHeaders: {{ .Values.app.readinessProbe.headers }}
             {{ end }}
           initialDelaySeconds: {{ .Values.app.readinessProbe.initialDelaySeconds | default 0 }}
           periodSeconds: {{ .Values.app.readinessProbe.periodSeconds | default 10 }}
