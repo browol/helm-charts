@@ -13,14 +13,4 @@ entries:
     urls:
     - https://github.com/browol/helm-charts/releases/download/general-purpose-0.3.0-rc.1/general-purpose-0.3.0-rc.1.tgz
     version: 0.3.0-rc.1
-  - apiVersion: v2
-    appVersion: 1.16.0
-    created: "2023-02-03T15:17:56.2096563+07:00"
-    description: A Helm chart for Kubernetes to deploy an Application
-    digest: 7b0cbc64b69689f54679752ee237c2ee5e3ecc5db4d5f206e363d531fa11dac1
-    name: general-purpose
-    type: application
-    urls:
-    - packages/general-purpose-0.2.9.tgz
-    version: 0.2.9
 generated: "2023-11-26T10:16:35.639379512Z"
