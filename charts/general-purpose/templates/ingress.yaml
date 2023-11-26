@@ -24,7 +24,7 @@ spec:
   {{- range .http }}
   {{ if .tls }}
   {{ if .tls.cert }}
-  {{ $tlssecret := printf "%s--%s" .tls.cert.name "tls" }}
+  {{ $tlssecret := printf "%s-%s" "tls" .tls.cert.name }}
     - secretName: {{ $tlssecret }}
       hosts:
         {{- toYaml .domainName | nindent 8 }}

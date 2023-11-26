@@ -1,11 +1,11 @@
-{{- if .Values.ConfigMap.enabled -}}
+{{- if .Values.configMap.enabled -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Values.app.name | default .Release.Name }}--configmap
+  name: {{ .Values.app.name | default .Release.Name }}
 data:
-  {{- if .Values.ConfigMap.data -}}
-  {{- range $index, $value := .Values.ConfigMap.data }}
+  {{- if .Values.configMap.data -}}
+  {{- range $index, $value := .Values.configMap.data }}
   {{ $value.name }}: {{ $value.value | quote }}
   {{- end }}
   {{- end -}}
@@ -21,7 +21,7 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ $value.spec.name }}-{{ $releaseName }}--configmap
+  name: {{ $value.spec.name }}
 data:
   {{ $value.spec.fileName }}: |-
 {{ if $value.spec.fromFile }}

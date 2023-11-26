@@ -2,7 +2,7 @@ apiVersion: v2
 name: general-purpose
 description: A Helm chart for Kubernetes to deploy an Application
 type: application
-version: 0.2.10
+version: 0.3.0-rc.1
 maintainers:
 - name: browol
   url: https://github.com/browol

@@ -188,7 +188,7 @@ ingress:
           port:
             number: 8080
   
-ConfigMap:
+configMap:
   enabled: false
   data:
     - name: NODE_ENV
