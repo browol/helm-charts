@@ -29,5 +29,5 @@ helm install browol/general-purpose
 To install a specific version of a chart, use the `--version` flag:
 
 ```bash
-helm install browol/general-purpose --version 0.2.10
+helm install browol/general-purpose --version 0.3.0-rc.1
 ```
