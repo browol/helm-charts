@@ -18,15 +18,23 @@ helm repo add helm-charts https://browol.github.io/helm-charts
 helm repo update
 ```
 
-### Installing Charts
+Once the repository is added, you can install a chart using its name:
 
-To install, you need to specific version of the chart, use the `--version` flag:
+```bash
+helm install myapp helm-charts/general-purpose
+```
+
+### Installing a Specific Chart Version
+
+To install a specific version of a chart, use the `--version` flag:
 
 ```bash
 helm install myapp helm-charts/general-purpose --version 0.3.0
 ```
 
-## Configuration
+### Configuration Example
+
+The following example shows how to configure the chart to deploy a simple nginx container:
 
 ```yaml
 app:
