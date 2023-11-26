@@ -118,11 +118,11 @@ spec:
           {{- toYaml .Values.resources | nindent 10 }}
 
         # Defined variable configMapMeta.
-        {{-  $configMapMeta := printf "%s--%s" $releaseName "configmap" -}}
+        {{-  $configMapMeta := $releaseName -}}
         # Defined variable secretMeta.
         {{ $secretMeta := printf "%s-%s" "keyvault" $releaseName }}
 
-        # Use envFrom to define all of the ConfigMap's data as container environment variables
+        # Use envFrom to define all of the configMap's data as container environment variables
         envFrom:
           {{ if .Values.envFrom.enabled }}
           {{- toYaml .Values.envFrom.data | nindent 10 }}
@@ -130,15 +130,18 @@ spec:
 
         # Environment variable injection
         env:
+
           # Check Env is enabled
           {{ if .Values.env.enabled }}
           # then inject env to the application.
           {{- toYaml .Values.env.data | nindent 10 }}
           {{ end }}
-          # Check ConfigMap is enabled
-          {{ if .Values.ConfigMap.enabled }}
+
+          # Check configMap is enabled
+          {{ if .Values.configMap.enabled }}
+
           # Inject env to the application.
-          {{ range $key, $value := .Values.ConfigMap.data }}
+          {{ range $key, $value := .Values.configMap.data }}
           - name: {{ $value.name }}
             valueFrom:
               configMapKeyRef:
@@ -146,6 +149,7 @@ spec:
                 key: {{ $value.name }}
           {{ end }}
           {{ end }}
+
           # Env variable from Secret (Azure Keyvault)
           # Check Secret is enabled
           {{ if .Values.keyVault.enabled }}
@@ -159,17 +163,17 @@ spec:
           {{ end }}
           {{ end }}
           {{ end }}
+
           # Env variable from volumeMounts (configMap)
           {{ if .Values.volumeMounts.enabled }}
           {{ if .Values.volumeMounts.volumes }}
-          {{- $configMapSuffix := printf "%s--%s" $releaseName "configmap" -}}
           {{ range $key, $value := .Values.volumeMounts.volumes }}
           {{ if eq $value.type "configMap" }}
           {{ if $value.spec.asEnvVar }}
           - name: {{ $value.spec.asEnvVar }}
             valueFrom:
               configMapKeyRef:
-                name: {{ $value.spec.name }}-{{ $configMapSuffix }}
+                name: {{ $value.spec.name }}
                 key: {{ $value.spec.fileName }}
           {{ end }}
           {{ end }}
@@ -186,45 +190,46 @@ spec:
       {{ if or .Values.volumeMounts.enabled .Values.keyVault.enabled }}
       {{- $secret := .Values.keyVault -}}
       volumes:
+        {{ if .Values.volumeMounts.enabled }}
         {{ if .Values.volumeMounts.volumes }}
         {{ range $key, $value := .Values.volumeMounts.volumes }}
         {{ if $value }}
+          
+        {{ if eq $value.type "emptyDir" }} 
+        # Empty Dir
         - name: {{ $value.name }}
-          # Empty Dir
-          {{ if eq $value.type "emptyDir" }}  # check for create volume as empty (empty volume)
           emptyDir: {}
-          # ConfigMap
-          {{ else if eq $value.type "configMap" }}  # check for create volume from configMap (configMap volume)
+          
+        {{ else if eq $value.type "configMap" }}
+        # configMap
+        - name: {{ $value.name }}
           configMap:
-            name: {{ $value.spec.name }}-{{ $releaseName }}--configmap
+            name: {{ $value.spec.name }}
             items:
             - key: {{ $value.spec.fileName }}
               path: {{ $value.spec.fileName }}
-          # CSI Driver for Key Vault
-          {{ else if and (eq $value.type "csi") (eq $secret.enabled true) }}
-          csi:
-            driver: {{ $secret.config.driver | default "secrets-store.csi.k8s.io" }}
-            readOnly: true
-            volumeAttributes:
-              secretProviderClass: secret-provider-{{ $releaseName }}
-            nodePublishSecretRef:
-              name: {{ $secret.config.secretRef | quote }} # secret name that create in namespace before helm install
-          # Azure Disk
-          {{ else if eq $value.type "azureDisk" }}
+
+        {{ else if eq $value.type "azureDisk" }}
+        # Azure Disk
+        - name: {{ $value.name }}
           azureDisk:
             kind: Managed
             diskName: {{ $value.spec.diskName }}
             diskURI: {{ $value.spec.diskURI }}
-          # Existing PVC
-          {{ else if eq $value.type "persistentVolumeClaim" }}
+
+        {{ else if eq $value.type "persistentVolumeClaim" }}
+        # Existing PVC
+        - name: {{ $value.name }}
           persistentVolumeClaim:
             claimName: {{ $value.spec.claimName }}
           {{ end }}
+
         {{ end }}
         {{ end }}
         {{ end }}
+        {{ end }}
+
         {{ if .Values.keyVault.enabled }}
-        {{ if .Values.keyVault.config.autoVolume }} # auto create volume option for Key Vault
         - name: vault
           csi:
             driver: {{ $secret.config.driver | default "secrets-store.csi.k8s.io" }}
@@ -234,7 +239,7 @@ spec:
             nodePublishSecretRef:
               name: {{ $secret.config.secretRef | quote }} # secret name that create in namespace before helm install
         {{ end }}
-        {{ end }}
+        
       {{ end }}
 
   # Deployment strategy

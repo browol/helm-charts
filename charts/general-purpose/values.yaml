@@ -5,19 +5,17 @@ app:
     repository: nginxinc/nginx-unprivileged    # (Optional) Default: .Values.app.name | default .Release.Name
     tag: latest
     pullPolicy: Always
-
     # pullSecret: image-secret-helm
     pullSecret: null
-
-    # containerPort: 4200
-    containerPort: null
+    containerPort: 8080
 
   readinessProbe:
-    enabled: false
-    path: /api/health
+    enabled: true
+    path: /
   livenessProbe:
-    enabled: false
-    path: /api/health
+    enabled: true
+    path: /
+    initialDelaySeconds: 300
 
   # Pod annotations
   annotations: {}
@@ -40,7 +38,7 @@ securityContext:
     - 1001
 
 initContainers:
-  enabled: false
+  enabled: true
   containers:
   - name: install
     image: busybox
@@ -54,7 +52,7 @@ initContainers:
       mountPath: /work-dir
 
 volumeMounts:
-  enabled: false
+  enabled: true
   volumes:
 
   # Export env variable from inline data and mount as config.json file
@@ -70,38 +68,38 @@ volumeMounts:
           "hello": "world"
         }
 
-  # Export env variable from json file and mount as config.json file
-  - name: json-from-file-as-env
-    type: configMap
-    mountPath: /app/assets/
-    spec:
-      name: env-from-file           # Configmap name
-      asEnvVar: MY_CONFIG           # (Optional) Environment variable
-      fileName: config.json         # Filename in configmap
-      fromFile: ./config.json       # Path to your json file
-
-  # mounting persistance volume claim into pods from azure disk
-  - name: my-azure-managed-disk
-    type: azureDisk
-    mountPath: /tmp/data/
-    spec:
-      diskName: pvcRestored
-      diskURI: /subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/MC_myResourceGroupAKS_myAKSCluster_eastus/providers/Microsoft.Compute/disks/pvcRestored
-
-  # mounting persistance volume claim into pods from existing pvc
-  - name: my-existing-pvc
-    type: persistentVolumeClaim
-    mountPath: /tmp/app/
-    spec:
-      claimName: azure-default-disk
-
   # mounting emptyDir volume
   - name: workdir
     type: emptyDir
     mountPath: /work-dir
 
+  # Export env variable from json file and mount as config.json file
+  # - name: json-from-file-as-env
+  #   type: configMap
+  #   mountPath: /app/assets/
+  #   spec:
+  #     name: env-from-file           # Configmap name
+  #     asEnvVar: MY_CONFIG           # (Optional) Environment variable
+  #     fileName: config.json         # Filename in configmap
+  #     fromFile: ./config.json       # Path to your json file
+
+  # mounting persistance volume claim into pods from azure disk
+  # - name: my-azure-managed-disk
+  #   type: azureDisk
+  #   mountPath: /tmp/data/
+  #   spec:
+  #     diskName: pvcRestored
+  #     diskURI: /subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/MC_myResourceGroupAKS_myAKSCluster_eastus/providers/Microsoft.Compute/disks/pvcRestored
+
+  # mounting persistance volume claim into pods from existing pvc
+  # - name: my-existing-pvc
+  #   type: persistentVolumeClaim
+  #   mountPath: /tmp/app/
+  #   spec:
+  #     claimName: azure-default-disk
+
 service:
-  enabled: false
+  enabled: true
   name: nginx
   ports:
   - name: proxy
@@ -110,7 +108,7 @@ service:
     protocol: TCP
 
 ingress:
-  enabled: false
+  enabled: true
   ingresses:
   - name: my-internal-ingress
     annotations:
@@ -124,17 +122,19 @@ ingress:
         serviceName: nginx
         servicePort: 80
     http:
-      - domainName:
-        - example.com
-        tls: null
-      - domainName:
-        - example2.com
-        tls:
-          existingSecret: null
-          cert:
-            name: pubcert
-            path: certificates/pub    # path to certificate directory
-            fileName: "*"
+    - domainName:
+      - example.com
+      tls: null
+
+    # - domainName:
+    #   - example2.com
+    #   tls:
+    #     existingSecret: null
+    #     cert:
+    #       name: pubcert
+    #       path: certificates/pub    # path to certificate directory
+    #       fileName: "*"
+
   - name: my-internet-ingress
     annotations:
       nginx.ingress.kubernetes.io/service-upstream: "true"
@@ -150,24 +150,26 @@ ingress:
     - domainName:
       - example3.com
       - example4.com
-      tls:
-        existingSecret: my-tls-secret
-    - domainName:
-      - example5.com
-      tls:
-        existingSecret: null
-        cert:
-          name: extcert
-          path: certificates/ext    # path to certificate directory
-          fileName: "*"
-    defaultBackend:
-      service:
-        name: default-http-backend
-        port:
-          number: 80
+      # tls:
+      #   existingSecret: my-tls-secret
 
-ConfigMap:
-  enabled: false
+    # - domainName:
+    #   - example5.com
+    #   tls:
+    #     existingSecret: null
+    #     cert:
+    #       name: extcert
+    #       path: certificates/ext    # path to certificate directory
+    #       fileName: "*"
+
+    # defaultBackend:
+    #   service:
+    #     name: default-http-backend
+    #     port:
+    #       number: 80
+
+configMap:
+  enabled: true
   data:
   - name: NODE_ENV
     value: "dynamic"
@@ -190,11 +192,11 @@ envFrom:
 # envFrom:
 #   enabled: false
 #   data:
-#     - configMapRef:
-#           name: env-proxy
+#   - configMapRef:
+#       name: env-proxy
 
 env:
-  enabled: false
+  enabled: true
   data:
   - name: MY_NODE_NAME
     valueFrom:
@@ -207,7 +209,6 @@ env:
 keyVault:
   enabled: false
   config:
-    autoVolume: true
     provider: azure
     driver: secrets-store.csi.k8s.io
     resourceGroup: rg-example
