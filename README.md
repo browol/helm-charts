@@ -1,4 +1,7 @@
-#  Helm Chart for General Purpose Application Deployment
+# Browol Helm Charts
+
+[![Chart Publish](https://github.com/browol/helm-charts/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/browol/helm-charts/actions/workflows/release.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Introduction
 
@@ -6,12 +9,13 @@ This repository contains a collection of Helm charts for deploying and managing 
 
 ## Usage
 
-### Installing a Chart
+### Add Helm Repository
 
 To install a chart from this repository, first add the repository to your Helm client:
 
 ```bash
-helm repo add browol https://github.com/browol/helm-charts.git
+helm repo add browol https://browol.github.io/helm-charts
+helm repo update
 ```
 
 Once the repository is added, you can install a chart using its name:
@@ -20,50 +24,10 @@ Once the repository is added, you can install a chart using its name:
 helm install browol/general-purpose
 ```
 
-Replace `<chart-name>` with the name of the chart you want to install.
+### Installing a Specific Chart Version
 
-### Updating a Chart
-
-To update an existing chart, first upgrade your Helm client:
+To install a specific version of a chart, use the `--version` flag:
 
 ```bash
-helm upgrade --install browol/general-purpose
-```
-
-Replace `<chart-name>` with the name of the chart you want to update.
-
-### Releasing a New Chart Version
-
-1. Bump the chart version in `Chart.yaml`:
-
-```yaml
-version: <chart-version> # <<<< Bump version here
-```
-
-2. Lint the chart:
-
-```bash
-helm lint ./
-```
-
-3. Create the Helm chart package:
-
-```bash
-helm package ./ -d packages/
-```
-
-4. Update the Helm chart repository index:
-
-```bash
-helm repo index --url ./ --merge index.yaml ./
-```
-
-5. Push the changes to the git repository on GitHub:
-
-```bash
-git add . && \
-git commit -m "your commit message" && \
-git push origin main && \
-git tag -f v<chart-version> $(git rev-parse --short HEAD) && \
-git push --tags -f
+helm install browol/general-purpose --version 0.2.10
 ```
