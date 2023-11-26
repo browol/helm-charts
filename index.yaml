@@ -2,6 +2,18 @@ apiVersion: v1
 entries:
   general-purpose:
   - apiVersion: v2
+    created: "2023-11-26T10:16:35.639363682Z"
+    description: A Helm chart for Kubernetes to deploy an Application
+    digest: ab825b05c4b83d8c332fd988b6bcff343f8513f68bf237b6c33ccb9df0357c7d
+    maintainers:
+    - name: browol
+      url: https://github.com/browol
+    name: general-purpose
+    type: application
+    urls:
+    - https://github.com/browol/helm-charts/releases/download/general-purpose-0.3.0-rc.1/general-purpose-0.3.0-rc.1.tgz
+    version: 0.3.0-rc.1
+  - apiVersion: v2
     appVersion: 1.16.0
     created: "2023-02-03T15:17:56.2096563+07:00"
     description: A Helm chart for Kubernetes to deploy an Application
@@ -11,4 +23,4 @@ entries:
     urls:
     - packages/general-purpose-0.2.9.tgz
     version: 0.2.9
-generated: "2023-02-03T15:17:56.206641+07:00"
+generated: "2023-11-26T10:16:35.639379512Z"
